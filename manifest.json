@@ -1,0 +1,22 @@
+{
+  "name": "HeartSync - WhatsApp 戀愛聊天教練",
+  "short_name": "HeartSync",
+  "description": "結合 MBTI、八字五行與 WhatsApp 沉浸式擬真女性戀愛聊天模擬器",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0c1317",
+  "theme_color": "#1f2c34",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

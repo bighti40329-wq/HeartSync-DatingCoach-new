@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1f2c34">
+  <title>HeartSync - WhatsApp 戀愛聊天教練</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    :root {
+      --wa-dark-bg: #0c1317;
+      --wa-panel-bg: #111b21;
+      --wa-header-bg: #1f2c34;
+      --wa-incoming: #202c33;
+      --wa-outgoing: #005c4b;
+      --wa-green: #00a884;
+      --wa-text: #e9edef;
+      --wa-muted: #8696a0;
+      --wa-border: #222d34;
+      --wa-ticks-blue: #53bdeb;
+      --wa-ticks-gray: #8696a0;
+      --wa-danger: #ef4444;
+      --wa-alert-bg: #3a2b16;
+      --wa-alert-text: #fde047;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--wa-dark-bg); color: var(--wa-text); display: flex; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+    .app-container { width: 100%; max-width: 480px; min-height: 100vh; display: flex; flex-direction: column; position: relative; background: var(--wa-panel-bg); border-left: 1px solid var(--wa-border); border-right: 1px solid var(--wa-border); }
+    .wa-top-header { background: var(--wa-header-bg); padding: 13px 16px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; border-bottom: 1px solid var(--wa-border); }
+    .wa-title { font-size: 19px; font-weight: 700; color: var(--wa-text); display: flex; align-items: center; gap: 8px; }
+    .badge { font-size: 11px; background: var(--wa-green); color: #111b21; padding: 2px 7px; border-radius: 12px; font-weight: 800; }
+    .wa-bottom-bar { position: fixed; bottom: 0; width: 100%; max-width: 480px; background: var(--wa-header-bg); border-top: 1px solid var(--wa-border); display: flex; z-index: 100; padding-bottom: env(safe-area-inset-bottom, 6px); }
+    .wa-tab-item { flex: 1; padding: 9px 2px 7px 2px; text-align: center; background: none; border: none; color: var(--wa-muted); font-size: 11px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .wa-tab-item.active { color: var(--wa-green); font-weight: 700; }
+    .wa-tab-icon { font-size: 19px; }
+    .view-screen { display: none; flex: 1; flex-direction: column; padding: 12px 14px 80px 14px; overflow-y: auto; }
+    .view-screen.active { display: flex; }
+    .chat-row { display: flex; align-items: center; gap: 14px; padding: 12px 6px; border-bottom: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+    .avatar-box { width: 50px; height: 50px; border-radius: 50%; background: #1f2c34; display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; border: 1.5px solid rgba(255,255,255,0.1); }
+    .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+    .chat-main-info { flex: 1; min-width: 0; }
+    .chat-title-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+    .chat-contact-name { font-size: 16px; font-weight: 600; color: var(--wa-text); }
+    .favor-tag { font-size: 11px; padding: 2px 8px; background: rgba(0, 168, 132, 0.15); color: var(--wa-green); border: 1px solid rgba(0, 168, 132, 0.35); border-radius: 12px; font-weight: 700; }
+    .card { background: var(--wa-header-bg); border: 1px solid var(--wa-border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+    .card-title { font-size: 14px; font-weight: 700; color: var(--wa-green); margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    label { display: block; font-size: 12px; font-weight: 600; color: var(--wa-muted); margin-bottom: 4px; }
+    input, select, textarea { width: 100%; background: #2a3942; border: 1px solid #3b4a54; color: #fff; border-radius: 8px; padding: 9px 12px; font-size: 13px; margin-bottom: 12px; outline: none; }
+    .btn-wa-action { width: 100%; background: var(--wa-green); color: #111b21; border: none; border-radius: 8px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-wa-sub { background: #202c33; color: #e9edef; border: 1px solid #374248; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    /* 聊天室 */
+    #view-chat-room { padding: 0; height: 100vh; display: none; flex-direction: column; position: relative; z-index: 150; background: #0b141a; }
+    #view-chat-room.active { display: flex; }
+    .room-header { background: var(--wa-header-bg); padding: 8px 12px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--wa-border); }
+    .messages-viewport { flex: 1; padding: 16px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+    .msg-group { display: flex; flex-direction: column; max-width: 82%; }
+    .msg-group.user { align-self: flex-end; }
+    .msg-group.bot { align-self: flex-start; }
+    .wa-bubble { padding: 8px 12px 6px 12px; border-radius: 8px; font-size: 14px; line-height: 1.45; word-break: break-word; }
+    .wa-bubble.user { background: var(--wa-outgoing); color: #e9edef; border-top-right-radius: 0; }
+    .wa-bubble.bot { background: var(--wa-incoming); color: #e9edef; border-top-left-radius: 0; }
+    .wa-quote-card { margin-top: 6px; background: rgba(11, 20, 26, 0.7); border-left: 3px solid #38bdf8; border-radius: 4px; padding: 6px 8px; font-size: 11px; color: #cbd5e1; }
+    .wa-input-bar { background: var(--wa-header-bg); padding: 8px 10px; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--wa-border); }
+    .wa-input-pill { flex: 1; background: #2a3942; border: none; border-radius: 20px; padding: 9px 14px; color: #fff; font-size: 14px; outline: none; }
+    .btn-circle-send { width: 40px; height: 40px; border-radius: 50%; background: var(--wa-green); border: none; color: #111b21; font-size: 18px; font-weight: 800; cursor: pointer; flex-shrink: 0; }
+    .p-tab-chip { padding: 6px 12px; background: #202c33; border: 1px solid var(--wa-border); color: var(--wa-muted); font-size: 12px; border-radius: 20px; cursor: pointer; white-space: nowrap; }
+    .p-tab-chip.active { background: var(--wa-green); color: #111b21; font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <!-- 對話列表 -->
+  <div id="screen-chats" class="view-screen active">
+    <div class="wa-top-header">
+      <div class="wa-title">WhatsApp <span class="badge" id="chats-count-badge">3 位對象</span></div>
+      <div style="font-size:12px; color:var(--wa-muted);" id="chats-circadian-hint">時段感知中</div>
+    </div>
+    <div class="chat-list" id="wa-chat-list"></div>
+  </div>
+
+  <!-- 人設工坊 (1~10人) -->
+  <div id="screen-personas" class="view-screen">
+    <div class="wa-top-header">
+      <div class="wa-title">💃 對象人設工坊</div>
+      <span style="font-size:12px; color:var(--wa-muted);" id="persona-count-label">共 3/10 人</span>
+    </div>
+    <div style="display:flex; gap:8px; overflow-x:auto; margin-bottom:12px;" id="persona-chips-bar"></div>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div class="card-title" style="margin-bottom:0;" id="edit-persona-title">✏️ 編輯對象人設</div>
+        <button class="btn-wa-sub" style="color:var(--wa-danger);" onclick="deleteCurrentPersona()">🗑️ 刪除此對象</button>
+      </div>
+      <div class="grid-2">
+        <div><label>暱稱</label><input type="text" id="edit-p-name" onchange="saveCurrentPersonaData()"></div>
+        <div><label>年齡</label><input type="number" id="edit-p-age" onchange="saveCurrentPersonaData()"></div>
+      </div>
+      <div class="grid-2">
+        <div><label>星座</label><input type="text" id="edit-p-zodiac" onchange="saveCurrentPersonaData()"></div>
+        <div><label>MBTI</label><input type="text" id="edit-p-mbti" onchange="saveCurrentPersonaData()"></div>
+      </div>
+      <label>八字五行與性格特徵</label><input type="text" id="edit-p-bazi" onchange="saveCurrentPersonaData()">
+      <label>生活圈與詳細特徵</label><textarea id="edit-p-desc" rows="3" onchange="saveCurrentPersonaData()"></textarea>
+      <label>聊天地雷</label><input type="text" id="edit-p-mine" onchange="saveCurrentPersonaData()">
+      <button class="btn-wa-action" onclick="jumpToActiveChat()">💬 開啟 WhatsApp 聊天</button>
+    </div>
+  </div>
+
+  <!-- 盲點與 API 設定 -->
+  <div id="screen-profile" class="view-screen">
+    <div class="wa-top-header"><div class="wa-title">👤 我的性格與 API 設定</div></div>
+    <div class="card">
+      <div class="card-title">🔑 Google Gemini API Key 連線設定</div>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input type="password" id="gemini-key" placeholder="貼上 API Key" style="margin-bottom:0; flex:1;" onchange="saveUserProfile()">
+        <button class="btn-wa-action" style="width:auto; padding:0 14px; font-size:12px; white-space:nowrap;" onclick="testGeminiApiKey()">⚡ 測試連線</button>
+      </div>
+      <div id="api-test-status" style="display:none; font-size:12px; padding:8px 10px; border-radius:6px; margin-bottom:8px;"></div>
+      <div style="font-size: 11px; color: var(--wa-muted);">金鑰已預載為你的專屬 Key，點擊「⚡ 測試連線」可即時確認狀態。</div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚙️ 個人檔案</div>
+      <div class="grid-2">
+        <div><label>性別</label><select id="u-gender"><option value="male">男</option><option value="female">女</option></select></div>
+        <div><label>年齡</label><input type="number" id="u-age" value="35"></div>
+      </div>
+      <div class="grid-2">
+        <div><label>星座</label><input type="text" id="u-zodiac" value="雙子座"></div>
+        <div><label>MBTI</label><input type="text" id="u-mbti" value="INTP"></div>
+      </div>
+      <label>八字特徵</label><input type="text" id="u-bazi" value="戊土日主 (沉穩務實、慢熟，防備心重)">
+    </div>
+  </div>
+
+  <!-- 獨立聊天室視窗 -->
+  <div id="view-chat-room">
+    <div class="room-header">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button style="background:none; border:none; color:#94a3b8; font-size:20px; cursor:pointer;" onclick="closeChatRoom()">←</button>
+        <div class="avatar-box" style="width:38px; height:38px;" id="room-avatar"></div>
+        <div>
+          <div style="font-size:15px; font-weight:700;" id="room-name">對象</div>
+          <div style="font-size:11px; color:var(--wa-green);" id="room-status">在線上</div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:6px;">
+        <span id="room-api-indicator" style="font-size:10px; padding:3px 6px; border-radius:10px; background:#202c33; border:1px solid #374248;">🟡 離線模式</span>
+        <div class="favor-tag" id="room-favor">❤️ 50</div>
+      </div>
+    </div>
+    <div id="api-error-banner" style="display:none; background:#7f1d1d; color:#fecaca; padding:8px 12px; font-size:11px;"></div>
+    <div class="messages-viewport" id="messages-container"></div>
+    <div class="wa-input-bar">
+      <input type="text" class="wa-input-pill" id="room-msg-input" placeholder="輸入訊息..." onkeypress="if(event.key==='Enter') sendRoomMessage()">
+      <button class="btn-circle-send" onclick="sendRoomMessage()">➤</button>
+    </div>
+  </div>
+
+  <!-- 底部導航列 -->
+  <nav class="wa-bottom-bar">
+    <button class="wa-tab-item active" onclick="switchNavTab('screen-chats')"><span class="wa-tab-icon">💬</span><span>對話</span></button>
+    <button class="wa-tab-item" onclick="switchNavTab('screen-personas')"><span class="wa-tab-icon">💃</span><span>人設</span></button>
+    <button class="wa-tab-item" onclick="switchNavTab('screen-profile')"><span class="wa-tab-icon">👤</span><span>盲點/API</span></button>
+  </nav>
+</div>
+
+<script>
+  // 內嵌你的專屬 API Key 作為全域預設
+  const DEFAULT_API_KEY = "AQ.Ab8RN6JIWbCpqY4zBNST-Tx-8knMmtyYuz-dgsWw_38xmCoZiw";
+
+  const defaultPersonas = [
+    {
+      id: "p1", name: "惠群", age: 33, zodiac: "天秤座", mbti: "ISFJ",
+      bazi: "辛金日主帶偏印：心思細膩、重生活質感、慢熟外柔內剛",
+      desc: "公關行銷工作，平時喜歡逛文創小店、看展、喝手沖咖啡，對生活細節有觀察力。",
+      mine: "說教、身家調查、秒回連環問", favorability: 50,
+      history: [{ role: "bot", time: "17:40", text: "呼～剛忙完週末活動撤場，嘉義今天傍晚風吹起來總算沒那麼悶了。你今天有出門晃晃，還是在家耍廢充個電？", subtext: "下班放鬆中，看對方能否接住日常話題。", tip: "先同理疲憊或分享生活畫面，切勿單字句點。" }]
+    },
+    {
+      id: "p2", name: "欣怡", age: 29, zodiac: "處女座", mbti: "INTJ",
+      bazi: "乙木日主帶傷官：邏輯俐落、外冷內熱",
+      desc: "UI/UX 設計師，喜歡簡約美學與建築攝影。討厭浮誇吹噓與無邏輯對話。",
+      mine: "自吹自擂、敷衍裝懂", favorability: 45,
+      history: [{ role: "bot", time: "15:20", text: "剛交完一版改了八次的介面視覺稿……眼睛快瞎了 🫠", subtext: "想找個有美感懂邏輯的人吐槽。", tip: "認同她在專業上的堅持，不要隨意給幹話建議。" }]
+    },
+    {
+      id: "p3", name: "品萱", age: 27, zodiac: "雙子座", mbti: "ENFP",
+      bazi: "丙火日主帶食神：熱情陽光、好奇心旺盛",
+      desc: "登山社愛好者兼社群小編，常往梅山竹林步道跑。喜歡戶外與冒險。",
+      mine: "死板說教、負能量抱怨", favorability: 55,
+      history: [{ role: "bot", time: "11:15", text: "哈哈我剛剛在看步道地圖，發現梅山竹林光影超美！你週末喜歡往山上跑嗎？", subtext: "看他是否也懂大自然與戶外樂趣。", tip: "帶入山林畫面感接球，語調保持陽光放鬆。" }]
+    }
+  ];
+
+  let personas = JSON.parse(localStorage.getItem('hs_personas') || JSON.stringify(defaultPersonas));
+  let currentEditingIndex = 0;
+  let activeChatPersonaId = null;
+
+  window.addEventListener('DOMContentLoaded', () => {
+    loadAllData();
+  });
+
+  function loadAllData() {
+    const savedKey = localStorage.getItem('hs_api_key');
+    document.getElementById('gemini-key').value = savedKey || DEFAULT_API_KEY;
+    renderChatList();
+    renderPersonaChips();
+    renderPersonaEditor();
+    updateChatRoomApiStatus();
+  }
+
+  function saveUserProfile() {
+    const key = document.getElementById('gemini-key').value.trim();
+    localStorage.setItem('hs_api_key', key);
+    updateChatRoomApiStatus();
+  }
+
+  function updateChatRoomApiStatus() {
+    const key = (document.getElementById('gemini-key') ? document.getElementById('gemini-key').value.trim() : '') || DEFAULT_API_KEY;
+    const indicator = document.getElementById('room-api-indicator');
+    if (!indicator) return;
+    if (key) {
+      indicator.innerText = "🟢 AI 待命";
+      indicator.style.color = "#00a884";
+      indicator.style.borderColor = "#00a884";
+    } else {
+      indicator.innerText = "🟡 離線模式";
+      indicator.style.color = "#f59e0b";
+      indicator.style.borderColor = "#f59e0b";
+    }
+  }
+
+  function renderChatList() {
+    const list = document.getElementById('wa-chat-list');
+    list.innerHTML = '';
+    document.getElementById('chats-count-badge').innerText = `${personas.length} 位對象`;
+    personas.forEach(p => {
+      const last = p.history[p.history.length - 1] || { text: "尚無對話", time: "昨天" };
+      const row = document.createElement('div');
+      row.className = 'chat-row';
+      row.onclick = () => openChatRoom(p.id);
+      row.innerHTML = `
+        <div class="avatar-box"><div style="font-size:20px; font-weight:bold; color:#00a884;">${p.name[0]}</div></div>
+        <div class="chat-main-info">
+          <div class="chat-title-row">
+            <div class="chat-contact-name">${p.name} <span style="font-size:11px; color:#8696a0;">· ${p.zodiac}</span></div>
+            <div style="font-size:11px; color:#8696a0;">${last.time}</div>
+          </div>
+          <div style="font-size:13px; color:#8696a0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${last.text}</div>
+        </div>
+        <div class="favor-tag">❤️ ${p.favorability}</div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function renderPersonaChips() {
+    const bar = document.getElementById('persona-chips-bar');
+    bar.innerHTML = '';
+    personas.forEach((p, idx) => {
+      const chip = document.createElement('button');
+      chip.className = `p-tab-chip ${idx === currentEditingIndex ? 'active' : ''}`;
+      chip.innerText = `${idx + 1}. ${p.name}`;
+      chip.onclick = () => { currentEditingIndex = idx; renderPersonaChips(); renderPersonaEditor(); };
+      bar.appendChild(chip);
+    });
+    if (personas.length < 10) {
+      const add = document.createElement('button');
+      add.className = 'p-tab-chip';
+      add.style.borderColor = '#00a884';
+      add.style.color = '#00a884';
+      add.innerText = `+ 新增 (${personas.length}/10)`;
+      add.onclick = addNewPersona;
+      bar.appendChild(add);
+    }
+    document.getElementById('persona-count-label').innerText = `共 ${personas.length}/10 人`;
+  }
+
+  function addNewPersona() {
+    if (personas.length >= 10) return;
+    const n = personas.length + 1;
+    personas.push({
+      id: "p_" + Date.now(), name: `對象 ${n}`, age: 28, zodiac: "巨蟹座", mbti: "ENFP",
+      bazi: "癸水日主：溫柔感性、慢熟", desc: "喜歡音樂與美食探索，重情緒共鳴。",
+      mine: "身家調查、說教", favorability: 50,
+      history: [{ role: "bot", time: "18:00", text: "哈囉～今天過得還順利嗎？", subtext: "輕鬆開啟對話。", tip: "用放鬆愉悅的狀態接話。" }]
+    });
+    currentEditingIndex = personas.length - 1;
+    savePersonas();
+    renderPersonaChips();
+    renderPersonaEditor();
+  }
+
+  function deleteCurrentPersona() {
+    if (personas.length <= 1) { alert("至少保留一位對象！"); return; }
+    if (confirm(`確定刪除「${personas[currentEditingIndex].name}」？`)) {
+      personas.splice(currentEditingIndex, 1);
+      currentEditingIndex = Math.max(0, currentEditingIndex - 1);
+      savePersonas();
+      renderPersonaChips();
+      renderPersonaEditor();
+    }
+  }
+
+  function renderPersonaEditor() {
+    const p = personas[currentEditingIndex];
+    document.getElementById('edit-persona-title').innerText = `✏️ 編輯對象 ${currentEditingIndex + 1}：${p.name}`;
+    document.getElementById('edit-p-name').value = p.name;
+    document.getElementById('edit-p-age').value = p.age;
+    document.getElementById('edit-p-zodiac').value = p.zodiac;
+    document.getElementById('edit-p-mbti').value = p.mbti;
+    document.getElementById('edit-p-bazi').value = p.bazi;
+    document.getElementById('edit-p-desc').value = p.desc;
+    document.getElementById('edit-p-mine').value = p.mine;
+  }
+
+  function saveCurrentPersonaData() {
+    const p = personas[currentEditingIndex];
+    p.name = document.getElementById('edit-p-name').value;
+    p.age = document.getElementById('edit-p-age').value;
+    p.zodiac = document.getElementById('edit-p-zodiac').value;
+    p.mbti = document.getElementById('edit-p-mbti').value;
+    p.bazi = document.getElementById('edit-p-bazi').value;
+    p.desc = document.getElementById('edit-p-desc').value;
+    p.mine = document.getElementById('edit-p-mine').value;
+    savePersonas();
+  }
+
+  function savePersonas() {
+    localStorage.setItem('hs_personas', JSON.stringify(personas));
+    renderChatList();
+  }
+
+  function jumpToActiveChat() {
+    saveCurrentPersonaData();
+    openChatRoom(personas[currentEditingIndex].id);
+  }
+
+  function openChatRoom(id) {
+    activeChatPersonaId = id;
+    const p = personas.find(item => item.id === id);
+    document.getElementById('room-name').innerText = p.name;
+    document.getElementById('room-avatar').innerHTML = `<div style="font-size:18px; font-weight:bold; color:#00a884;">${p.name[0]}</div>`;
+    document.getElementById('room-favor').innerText = `❤️ ${p.favorability}`;
+    document.getElementById('api-error-banner').style.display = 'none';
+    renderMessages(p);
+    document.getElementById('view-chat-room').classList.add('active');
+  }
+
+  function closeChatRoom() {
+    document.getElementById('view-chat-room').classList.remove('active');
+    renderChatList();
+  }
+
+  function renderMessages(p) {
+    const box = document.getElementById('messages-container');
+    box.innerHTML = '';
+    p.history.forEach(m => {
+      const wrap = document.createElement('div');
+      wrap.className = `msg-group ${m.role === 'user' ? 'user' : 'bot'}`;
+      if (m.role === 'user') {
+        wrap.innerHTML = `<div class="wa-bubble user">${m.text}<div style="font-size:10px; color:rgba(255,255,255,0.6); text-align:right;">${m.time || ''} ✓✓</div></div>`;
+      } else {
+        wrap.innerHTML = `
+          <div class="wa-bubble bot">${m.text}<div style="font-size:10px; color:rgba(255,255,255,0.6);">${m.time || ''}</div></div>
+          <div class="wa-quote-card"><b>💭 潛台詞：</b>${m.subtext || '觀察中'}<br><b style="color:#fde047;">💡 教練：</b>${m.tip || '保持自然'}</div>
+        `;
+      }
+      box.appendChild(wrap);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // 乾淨安全的 JSON 解析函式
+  function parseGeminiJson(raw) {
+    if (!raw) return null;
+    let s = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```$/i, '').trim();
+    const f = s.indexOf('{'), l = s.lastIndexOf('}');
+    if (f !== -1 && l !== -1) s = s.substring(f, l + 1);
+    try { return JSON.parse(s); } catch(e) { return null; }
+  }
+
+  // 發送訊息（包含雙端點容錯與真人上下文）
+  async function sendRoomMessage() {
+    const input = document.getElementById('room-msg-input');
+    const text = input.value.trim();
+    if (!text || !activeChatPersonaId) return;
+
+    const p = personas.find(item => item.id === activeChatPersonaId);
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    p.history.push({ role: 'user', text: text, time: timeStr });
+    savePersonas();
+    renderMessages(p);
+    input.value = '';
+
+    document.getElementById('room-status').innerText = '正在輸入...';
+    const apiKey = (document.getElementById('gemini-key') ? document.getElementById('gemini-key').value.trim() : '') || DEFAULT_API_KEY;
+
+    let reply = "", subtext = "", tip = "";
+    let errorDetected = null;
+
+    if (apiKey) {
+      try {
+        const historyText = p.history.slice(-8).map(h => `${h.role === 'user' ? '男生' : p.name}: ${h.text}`).join('\n');
+        const prompt = `你現在扮演女生在 WhatsApp 與男生聊天。人設：姓名${p.name}、${p.age}歲、${p.zodiac}、MBTI為${p.mbti}。特質：${p.desc}。地雷話題：${p.mine}。目前好感度：${p.favorability}/100。
+對象男生特質：INTP/戊土。
+
+【最近幾輪對話記憶】
+${historyText}
+
+男生最新發送的一句話："${text}"
+
+請以繁體中文以 JSON 格式回覆：
+{
+  "reply": "口語自然的回覆（1-2句，像真人發WhatsApp，承接上文，絕不重複上一句）",
+  "favor_change": 2,
+  "subtext": "此刻心裡的真實潛台詞（一句話）",
+  "coach_feedback": "戀愛教練針對男生這句話的盲點診斷與改進建議（一句話）"
+}`;
+
+        // 支援 1.5-flash 與 2.0-flash 自動容錯
+        const models = ['gemini-1.5-flash', 'gemini-2.0-flash'];
+        let resData = null;
+
+        for (const m of models) {
+          try {
+            const res = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/$](https://generativelanguage.googleapis.com/v1beta/models/$){m}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+              body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await res.json();
+            if (res.ok && data.candidates && data.candidates[0]) {
+              resData = data;
+              break;
+            } else if (data.error) {
+              errorDetected = `${data.error.message} (${data.error.code})`;
+            }
+          } catch(e) {
+            errorDetected = e.message;
+          }
+        }
+
+        if (resData) {
+          const raw = resData.candidates[0].content.parts[0].text;
+          const parsed = parseGeminiJson(raw);
+          if (parsed && parsed.reply) {
+            reply = parsed.reply;
+            subtext = parsed.subtext || "正在觀察彼此話題。";
+            tip = parsed.coach_feedback || "接話自然，可以進一步帶出生活細節。";
+            p.favorability = Math.max(0, Math.min(100, p.favorability + (parseInt(parsed.favor_change) || 0)));
+          } else {
+            reply = raw;
+            subtext = "自然互動中。";
+            tip = "保持交流節奏。";
+          }
+          document.getElementById('room-status').innerText = '🟢 AI 即時連線中';
+          document.getElementById('room-api-indicator').innerText = '🟢 AI 運作中';
+          document.getElementById('api-error-banner').style.display = 'none';
+        }
+      } catch(err) {
+        errorDetected = err.message;
+      }
+    }
+
+    if (!reply) {
+      // 若 API 失敗，明確提示在頂部橫幅
+      const banner = document.getElementById('api-error-banner');
+      banner.style.display = 'block';
+      banner.innerHTML = `⚠️ <b>API 連線失敗：</b>${errorDetected || '金鑰未授權或網路問題'}（目前切換為離線備用語句）`;
+      document.getElementById('room-status').innerText = '🟡 離線回覆模式';
+
+      reply = "哈哈真的假的！那你最近都在忙些什麼呢？我今天剛好比較悠閒～";
+      subtext = "話題挺輕鬆的，願意繼續聊。";
+      tip = "適度分享生活細節，不要變成身家調查。";
+    }
+
+    document.getElementById('room-favor').innerText = `❤️ ${p.favorability}`;
+    p.history.push({ role: 'bot', time: timeStr, text: reply, subtext: subtext, tip: tip });
+    savePersonas();
+    renderMessages(p);
+  }
+
+  // 獨立測試 API Key 函式
+  async function testGeminiApiKey() {
+    const key = (document.getElementById('gemini-key').value.trim()) || DEFAULT_API_KEY;
+    const box = document.getElementById('api-test-status');
+    box.style.display = 'block';
+    box.style.background = '#082f49';
+    box.style.color = '#38bdf8';
+    box.innerHTML = '⏳ 正在與 Google Gemini 伺服器進行握手測試...';
+
+    try {
+      const res = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$){encodeURIComponent(key)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ contents: [{ parts: [{ text: "你好" }] }] })
+      });
+      const data = await res.json();
+      if (res.ok && data.candidates) {
+        box.style.background = '#052e16';
+        box.style.color = '#4ade80';
+        box.innerHTML = '✅ <b>連線成功！</b>金鑰完全有效，已成功連接 Google <b>gemini-1.5-flash</b>，對話將由 AI 真人智能即時接話。';
+        saveUserProfile();
+      } else {
+        box.style.background = '#450a0a';
+        box.style.color = '#f87171';
+        box.innerHTML = `❌ <b>連線失敗：</b>${data.error ? data.error.message : 'HTTP ' + res.status}`;
+      }
+    } catch(e) {
+      box.style.background = '#450a0a';
+      box.style.color = '#f87171';
+      box.innerHTML = `❌ <b>連線異常：</b>${e.message}`;
+    }
+  }
+
+  function switchNavTab(id) {
+    document.querySelectorAll('.view-screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.wa-tab-item').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const idx = { 'screen-chats': 0, 'screen-personas': 1, 'screen-profile': 2 }[id];
+    document.querySelectorAll('.wa-tab-item')[idx].classList.add('active');
+  }
+</script>
+</body>
+</html>
